@@ -1,0 +1,22 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+
+# environment variables — never commit secrets
+.env.local
+.env*.local
+
+# uploaded user assets
+public/uploads/
+
+# project data (contains user uploads metadata)
+data/projects.json
+
+# OS
+.DS_Store
+
+# debug
+npm-debug.log*
