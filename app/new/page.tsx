@@ -267,7 +267,7 @@ function AnalysisReviewCard({
                 <span key={tag} className="text-[10px] bg-[#EEF0FF] text-[#5258E4] px-2 py-0.5 rounded-full">{tag}</span>
               ))}
               <span
-                title="Adobe Firefly model tags — copy these into Firefly's training UI when uploading each asset. They describe permanent visual attributes the model should learn."
+                title="Permanent visual attributes for this asset — copy these into Firefly's training UI alongside the caption. They help the model lock in stable traits like color, material, and style."
                 className="text-[10px] text-gray-400 cursor-help px-1 py-0.5"
               >ⓘ</span>
             </div>
@@ -311,30 +311,29 @@ function AnalysisReviewCard({
       {expanded && asset.status === 'complete' && (
         <div className="border-t border-gray-50 px-4 pb-4 pt-3 space-y-4">
 
-          {/* Caption — comma-separated tags rendered as a tag cloud + editable */}
+          {/* Caption — short Firefly training caption (≤15-18 words) */}
           <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-semibold text-[#5258E4]">
-                Caption <span className="font-normal text-gray-400">— Style · Subject · Setting · Composition · Atmosphere</span>
-              </label>
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <label className="text-xs font-semibold text-[#5258E4]">Training caption</label>
+              <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">≤15–18 words</span>
+              <span
+                title="This caption goes directly into Firefly's training UI. Adobe best practices require short, prompt-like captions (≤15-18 words) — longer captions hurt model performance and cause overfitting to background details."
+                className="text-gray-400 cursor-help text-xs leading-none"
+              >ⓘ</span>
             </div>
-            {/* Tag cloud preview */}
-            {asset.caption && (
-              <div className="flex flex-wrap gap-1.5 mb-2 p-3 bg-gray-50 rounded-xl max-h-28 overflow-y-auto">
-                {asset.caption.split(',').map((tag, i) => tag.trim() && (
-                  <span key={i} className="text-[11px] bg-white border border-gray-200 text-gray-600 px-2 py-0.5 rounded-full whitespace-nowrap">
-                    {tag.trim()}
-                  </span>
-                ))}
-              </div>
-            )}
             <textarea
               value={asset.caption}
               onChange={(e) => onChange('caption', e.target.value)}
-              rows={4}
-              placeholder="style, subject detail, setting, composition, atmosphere, mood…"
-              className="w-full text-xs text-gray-600 border border-gray-200 rounded-xl px-3 py-2.5 resize-none focus:outline-none focus:border-[#5258E4] leading-relaxed font-mono"
+              rows={2}
+              placeholder="e.g. sks person, young woman with auburn hair, laughing at an outdoor café"
+              className="w-full text-sm text-gray-700 border border-gray-200 rounded-xl px-3 py-2.5 resize-none focus:outline-none focus:border-[#5258E4] leading-relaxed"
             />
+            {asset.caption && (
+              <p className={`text-[10px] mt-1 ${asset.caption.trim().split(/\s+/).length > 18 ? 'text-amber-600' : 'text-gray-400'}`}>
+                {asset.caption.trim().split(/\s+/).length} words
+                {asset.caption.trim().split(/\s+/).length > 18 && ' — consider shortening to ≤18 words'}
+              </p>
+            )}
           </div>
 
           {/* Description — factual sentences */}
