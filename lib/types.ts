@@ -1,10 +1,15 @@
 export type ModelType =
   | 'lifestyle-photography'
-  | 'photorealistic-portraiture'
-  | 'still-life-product'
-  | 'character-development'
-  | 'iconography-graphics'
-  | '3d-isometric';
+  | 'photoshoot-person'
+  | 'still-life-photography'
+  | 'illustrated-character'
+  | 'iconography'
+  | 'illustrations'
+  | 'isometric-3d'
+  | 'brand-expressions'
+  | 'product-backgrounds'
+  | 'custom-subject'
+  | 'custom-style';
 export type AssetStatus = 'pending' | 'analyzing' | 'complete' | 'error';
 export type IssueLevel = 'error' | 'warning';
 export type ProjectStatus = 'draft' | 'validating' | 'analyzing' | 'chatting' | 'complete';

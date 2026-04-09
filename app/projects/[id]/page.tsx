@@ -23,11 +23,16 @@ const SEGMENT_ROLE_META: Record<PromptSegmentRole, { label: string; color: strin
 
 const MODEL_LABELS: Record<string, string> = {
   'lifestyle-photography': 'Lifestyle Photography',
-  'photorealistic-portraiture': 'Photorealistic Portraiture',
-  'still-life-product': 'Still Life & Product',
-  'character-development': 'Character Development',
-  'iconography-graphics': 'Iconography & Graphics',
-  '3d-isometric': '3D & Isometric Graphics',
+  'photoshoot-person': 'Photoshoot of a Person',
+  'still-life-photography': 'Still Life Photography',
+  'illustrated-character': 'Illustrated Character',
+  'iconography': 'Iconography',
+  'illustrations': 'Illustrations',
+  'isometric-3d': 'Isometric and 3D Graphics',
+  'brand-expressions': 'Explore Brand Expressions',
+  'product-backgrounds': 'Backgrounds for Product Shots',
+  'custom-subject': 'Custom Subject',
+  'custom-style': 'Custom Style',
 };
 
 function PromptBreakdownCard({

@@ -30,71 +30,105 @@ function getCaptionGuidance(modelType: string, keyTerm?: string): string {
 
   if (isSubject) {
     // Subject models: concept token MUST appear in every caption.
-    // Template varies by model type but always starts with the concept (keyTerm).
     switch (modelType) {
-      case 'photorealistic-portraiture':
-      case 'character-development':
-        return `CAPTION RULES — Subject model (person/character):
+      case 'photoshoot-person':
+        return `CAPTION RULES — Subject model (specific person):
 Template: {concept}, [1-2 stable physical traits], [action or pose], [setting]
 The concept token "${keyTerm}" MUST be the first element.
 Focus on: identity + stable distinguishing traits + what they are doing + where.
 Example: "${keyTerm}, young woman with curly red hair, laughing with friends at an outdoor café"
 Example: "${keyTerm}, older man with grey beard and glasses, seated at a desk in a warm study"
-≤15 words total. Vary the sentence structure across images — do NOT use a fixed opening phrase every time.`;
+≤15 words total. Vary sentence structure across images — do NOT use a fixed opener every time.`;
 
-      case 'lifestyle-photography':
-        return `CAPTION RULES — Subject model (lifestyle person):
-Template: {concept}, [1-2 key stable traits], [action/pose], [setting and context]
-The concept token "${keyTerm}" MUST be the first element.
-Focus on: the recurring subject identity + what they are doing + the lifestyle setting.
-Example: "${keyTerm}, tall man in casual denim jacket, walking through a sunlit city street"
-Example: "${keyTerm}, smiling woman with short dark hair, cooking in a bright modern kitchen"
-≤15 words total. Vary structure — no fixed boilerplate opener or closer.`;
-
-      case 'still-life-product':
-        return `CAPTION RULES — Subject model (product/object):
-Template: {concept}, [material and color], [orientation or use], [background or setting]
-The concept token "${keyTerm}" MUST be the first element.
-Focus on: product identity + key material/color attributes + how it is positioned or used.
+      case 'custom-subject':
+        return `CAPTION RULES — Custom subject model (product/object/character):
+Template: {concept}, [material and color or key trait], [orientation/use or action], [background or setting]
+The concept token "${keyTerm}" MUST be the first element — Firefly will warn or block training if it is missing.
+Focus on: subject identity + stable material/color attributes + how it is used or positioned.
 Example: "${keyTerm}, brushed stainless steel, upright on a white marble surface, soft studio lighting"
-Example: "${keyTerm}, deep red canvas texture, folded neatly on a pale wooden shelf"
-≤18 words total. Do not repeat the exact phrase structure in every caption.`;
+Example: "${keyTerm}, small cream terrier, sitting on a couch in a modern living room"
+≤18 words total. Use the SAME concept token in every caption — do not vary the name.`;
 
       default:
-        // Fallback for any subject model
         return `CAPTION RULES — Subject model:
 Template: {concept}, [key visual trait], [action or context], [setting]
-The concept token "${keyTerm}" MUST be the first element — this is required for Firefly training.
+The concept token "${keyTerm}" MUST be the first element — required for Firefly training.
 Write what you would actually type as a generation prompt.
 ≤15 words total. Vary sentence structure across images.`;
     }
   } else {
-    // Style models: focus on look/feel, no fixed concept token.
-    // Avoid repeating the same fixed phrase in every caption.
     switch (modelType) {
       case 'lifestyle-photography':
-        return `CAPTION RULES — Style model (photographic lifestyle look):
+        return `CAPTION RULES — Lifestyle photography style model:
 Template: photo, [color palette/tone], [lighting quality], [composition], [generic subject placeholder]
-Focus on: the visual aesthetic — palette, light, depth of field, composition. The subject is a placeholder.
+Focus on: the visual aesthetic — palette, light, depth of field, mood. Subject is a generic placeholder.
 Example: "photo, warm neutral tones, soft window light, shallow depth of field, candid people in modern office"
 Example: "photo, cool muted blues, harsh midday sun, wide angle, family on a rocky shoreline"
-≤18 words. Vary the palette/mood/subject placeholder each caption — do NOT repeat "the image shows…"`;
+≤18 words. Vary palette/mood/subject placeholder each caption — no fixed boilerplate opener.`;
 
-      case 'iconography-graphics':
-        return `CAPTION RULES — Style model (iconography/graphic):
-Template: [medium/format], [stroke or line quality], [color palette], [shape language], [generic subject]
+      case 'still-life-photography':
+        return `CAPTION RULES — Still life photography style model:
+Template: photo, [subject or product type], [material or texture], [background], [lighting]
+Focus on: product/object form, material quality, background simplicity, lighting.
+Example: "photo, ceramic coffee mug, warm earth tones, soft white background, diffused studio light"
+Example: "photo, glass perfume bottle, smooth transparent surface, dark marble surface, dramatic side lighting"
+≤18 words. Vary the product/object type and background each caption.`;
+
+      case 'illustrated-character':
+        return `CAPTION RULES — Illustrated character style model:
+Template: [illustration medium], [character description], [pose or action], [setting or context]
+Put the medium first. Focus on rendering style, character traits, and pose variety.
+Example: "flat vector illustration, round cartoon character with big eyes, waving, simple outdoor scene"
+Example: "bold line illustration, friendly animal mascot, sitting and reading, cozy library background"
+≤18 words. Vary pose and context — keep the rendering style consistent.`;
+
+      case 'iconography':
+        return `CAPTION RULES — Iconography style model:
+Template: [medium/format], [stroke or line quality], [color palette], [shape language], [generic icon subject]
 Put the medium first. Focus on: stroke weight, palette, corner style, abstraction level.
-Example: "monoline vector icon, 2px stroke, rounded corners, dark teal on transparent background, simple arrow shape"
-Example: "flat vector graphic, bold outlines, limited two-color palette, geometric shapes, abstract location pin"
-≤18 words. Vary the subject/shape placeholder — do not lock in one phrase like "icon of a…"`;
+Example: "monoline vector icon, 2px stroke, rounded corners, dark teal on transparent background, simple arrow"
+Example: "flat vector icon, bold outlines, two-color palette, geometric shapes, abstract location pin"
+≤18 words. Vary the icon subject placeholder — do not repeat "icon of a…" every time.`;
 
-      case '3d-isometric':
-        return `CAPTION RULES — Style model (3D/isometric):
-Template: isometric 3D render, [palette], [lighting style], [texture/material quality], [generic scene subject]
-Put the medium first. Focus on: render style, palette, lighting, surface quality.
+      case 'illustrations':
+        return `CAPTION RULES — Illustrations style model:
+Template: [illustration medium], [color palette], [line and texture quality], [generic subject or scene]
+Put the medium first. Focus on: artistic medium, palette, line quality, abstraction level.
+Example: "watercolor illustration, soft muted palette, loose brushwork, people walking in a park"
+Example: "digital editorial illustration, bold primary colors, clean flat shapes, urban street scene"
+≤18 words. Vary the scene subject each caption while keeping medium and palette consistent.`;
+
+      case 'isometric-3d':
+        return `CAPTION RULES — Isometric and 3D graphics style model:
+Template: isometric 3D [render/illustration], [palette], [lighting style], [surface quality], [generic scene]
+Put the medium first. Focus on: render style, palette, lighting, surface/material quality.
 Example: "isometric 3D render, soft pastel palette, gentle ambient occlusion, clean hard edges, small office building"
 Example: "isometric 3D illustration, bold primary colors, flat shading, minimal texture, city intersection scene"
-≤18 words. Vary the scene subject placeholder each caption.`;
+≤18 words. Vary the scene subject each caption.`;
+
+      case 'brand-expressions':
+        return `CAPTION RULES — Brand expressions style model:
+Template: [medium], [brand color palette], [mood or tone], [composition], [generic brand scene]
+Focus on: the visual language, palette, mood, and aesthetic range of the brand.
+Example: "photo, deep navy and warm gold palette, confident editorial mood, wide angle, professional workspace"
+Example: "graphic, muted sage and cream tones, minimal clean layout, bold typography, product lifestyle scene"
+≤18 words. Vary mood and scene — capture the breadth of the brand aesthetic.`;
+
+      case 'product-backgrounds':
+        return `CAPTION RULES — Product shot backgrounds style model:
+Template: [background type], [color or texture], [lighting style], [depth or atmosphere], [surface detail]
+Focus on: background environment, texture, color, and lighting — product is not present.
+Example: "studio background, soft warm white gradient, diffused overhead light, subtle grain texture, clean surface"
+Example: "lifestyle backdrop, deep forest green, dappled natural light, shallow depth of field, wooden surface"
+≤18 words. Vary color, texture, and lighting — no product in the caption.`;
+
+      case 'custom-style':
+        return `CAPTION RULES — Custom style model:
+Template: [medium/style descriptor], [color palette], [lighting or texture], [composition], [generic subject placeholder]
+Put the medium or style first. Focus entirely on the aesthetic — subject is a generic placeholder.
+Example: "photo, warm film grain, golden hour backlighting, shallow depth of field, person in open field"
+Example: "flat vector illustration, limited earth tone palette, bold outlines, minimal detail, abstract nature scene"
+≤18 words. Vary the subject placeholder across captions — the style is what the model learns.`;
 
       default:
         return `CAPTION RULES — Style model:
