@@ -7,9 +7,9 @@ import {
   ArrowLeft, ArrowRight, Upload, X, CheckCircle, AlertTriangle,
   AlertCircle, Sparkles, MessageSquare, Wand2, ChevronDown, ChevronUp,
   Copy, Check, Loader2, Camera, User, ShoppingBag, Laugh, Shapes, Boxes,
-  Tag, Search, ImageOff, Save, RefreshCw, ExternalLink,
+  Tag, Save, RefreshCw,
 } from 'lucide-react';
-import type { ModelType, TrainingAsset, ChatMessage, IdealPrompt, PromptSegment, PromptSegmentRole, ValidationIssue } from '@/lib/types';
+import type { ModelType, TrainingAsset, ChatMessage, IdealPrompt, PromptSegmentRole, ValidationIssue } from '@/lib/types';
 import { validateAsset, validateDataset, computeAssetScore } from '@/lib/validation';
 import { formatBytes, cn, scoreBg } from '@/lib/utils';
 
@@ -101,15 +101,6 @@ interface UploadedFile {
   preview: string;
   width: number;
   height: number;
-}
-
-interface PexelsPhoto {
-  id: number;
-  width: number;
-  height: number;
-  alt: string;
-  photographer: string;
-  src: { large: string; medium: string };
 }
 
 // ---- Helper components ----
@@ -568,23 +559,12 @@ function NewProjectWizard() {
   const [modelType, setModelType] = useState<ModelType | null>(null);
   const [keyTerm, setKeyTerm] = useState('');
 
-  // Step 1 — upload mode
-  const [uploadMode, setUploadMode] = useState<'upload' | 'find'>('upload');
+  // Step 1 — upload
   const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([]);
   const [dragging, setDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const fileHashesRef = useRef<Set<string>>(new Set());
   const [skippedDuplicates, setSkippedDuplicates] = useState(0);
-
-  // Step 1 — find mode
-  const [searchDescription, setSearchDescription] = useState('');
-  const [foundPhotos, setFoundPhotos] = useState<PexelsPhoto[]>([]);
-  const [selectedPhotoIds, setSelectedPhotoIds] = useState<Set<number>>(new Set());
-  const [searching, setSearching] = useState(false);
-  const [searchExplanation, setSearchExplanation] = useState('');
-  const [searchError, setSearchError] = useState('');
-  const [searchPage, setSearchPage] = useState(1);
-  const [downloadingFound, setDownloadingFound] = useState(false);
 
   // Step 2
   const [assets, setAssets] = useState<TrainingAsset[]>([]);
@@ -643,7 +623,7 @@ function NewProjectWizard() {
     return true;
   }
 
-  const totalSelectedCount = uploadedFiles.length + selectedPhotoIds.size;
+  const totalSelectedCount = uploadedFiles.length;
 
   async function saveProgress(currentStep: number, extra?: Record<string, unknown>) {
     if (!projectId) return;
@@ -734,51 +714,7 @@ function NewProjectWizard() {
     });
   }
 
-  // ---- Step 1: find mode ----
-
-  async function searchAssets(append = false) {
-    setSearching(true);
-    setSearchError('');
-    const nextPage = append ? searchPage + 1 : 1;
-
-    try {
-      const res = await fetch('/api/asset-search', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ description: searchDescription, modelType, keyTerm, page: nextPage }),
-      });
-      const data = await res.json();
-      if (data.error) { setSearchError(data.error); setSearching(false); return; }
-
-      const newPhotos: PexelsPhoto[] = data.photos ?? [];
-      if (append) {
-        setFoundPhotos((prev) => {
-          const existingIds = new Set(prev.map((p) => p.id));
-          return [...prev, ...newPhotos.filter((p) => !existingIds.has(p.id))];
-        });
-      } else {
-        setFoundPhotos(newPhotos);
-        // Auto-select all up to 20
-        setSelectedPhotoIds(new Set(newPhotos.slice(0, 20).map((p) => p.id)));
-      }
-      setSearchExplanation(data.explanation ?? '');
-      setSearchPage(nextPage);
-    } catch {
-      setSearchError('Search failed. Check your PEXELS_API_KEY in .env.local.');
-    }
-    setSearching(false);
-  }
-
-  function togglePhoto(id: number) {
-    setSelectedPhotoIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else if (next.size < 30) next.add(id);
-      return next;
-    });
-  }
-
-  // ---- Step 2: validate (handles both upload and found photos) ----
+  // ---- Step 2: validate ----
 
   async function runValidation() {
     setValidating(true);
@@ -800,30 +736,7 @@ function NewProjectWizard() {
       });
     }
 
-    // Download found photos
-    let foundAssets: TrainingAsset[] = [];
-    if (selectedPhotoIds.size > 0) {
-      setDownloadingFound(true);
-      const selectedPhotos = foundPhotos
-        .filter((p) => selectedPhotoIds.has(p.id))
-        .map((p) => ({ id: p.id, url: p.src.large, width: p.width, height: p.height, alt: p.alt }));
-
-      const dlRes = await fetch('/api/asset-download', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ photos: selectedPhotos, projectId }),
-      });
-      const downloaded = await dlRes.json();
-      foundAssets = (downloaded as Array<Omit<TrainingAsset, 'status' | 'validationIssues' | 'validationScore' | 'reversedPrompt' | 'caption' | 'tags' | 'aiNotes'>>).map((u) => {
-        const asset: TrainingAsset = { ...u, status: 'pending', validationIssues: [], validationScore: 0, reversedPrompt: '', description: '', caption: '', tags: [], aiNotes: [], lightingNotes: '', compositionNotes: '' };
-        asset.validationIssues = validateAsset(asset);
-        asset.validationScore = computeAssetScore(asset.validationIssues);
-        return asset;
-      });
-      setDownloadingFound(false);
-    }
-
-    const allAssets = [...uploadedAssets, ...foundAssets];
+    const allAssets = [...uploadedAssets];
     const dsIssues = validateDataset(allAssets);
     setAssets(allAssets);
     setDatasetIssues(dsIssues);
@@ -1182,173 +1095,37 @@ function NewProjectWizard() {
             <div className="flex items-start justify-between">
               <div>
                 <h2 className="text-2xl font-bold text-[#1a1a2e]">Upload training assets</h2>
-                <p className="text-gray-500 mt-1">Provide your own files or let AI find reference images for you.</p>
+                <p className="text-gray-500 mt-1">Upload 10–30 JPG or PNG images for your custom model.</p>
               </div>
               <button onClick={() => saveAndExit(1)} className="flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 transition-colors mt-1">
                 <Save className="w-3.5 h-3.5" /> Save draft
               </button>
             </div>
 
-            {/* Mode toggle */}
-            <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-fit">
-              {([['upload', 'Upload files', Upload], ['find', 'Find for me', Search]] as const).map(([mode, label, Icon]) => (
-                <button key={mode} onClick={() => setUploadMode(mode)}
-                  className={cn('flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
-                    uploadMode === mode ? 'bg-white shadow-sm text-[#1a1a2e]' : 'text-gray-500 hover:text-gray-700')}>
-                  <Icon className="w-4 h-4" />{label}
-                </button>
-              ))}
+            <div onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={(e) => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files); }}
+              onClick={() => fileInputRef.current?.click()}
+              className={cn('border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all',
+                dragging ? 'border-[#5258E4] bg-[#EEF0FF]' : 'border-gray-300 bg-white hover:border-[#5258E4] hover:bg-[#EEF0FF]/30')}>
+              <Upload className={cn('w-10 h-10 mx-auto mb-3', dragging ? 'text-[#5258E4]' : 'text-gray-300')} />
+              <p className="font-medium text-gray-600">Drop images here or click to browse</p>
+              <p className="text-sm text-gray-400 mt-1">JPG or PNG · Max 50MB each · 10–30 images</p>
+              <input ref={fileInputRef} type="file" multiple accept="image/jpeg,image/png" className="hidden"
+                onChange={(e) => e.target.files && handleFiles(e.target.files)} />
             </div>
 
-            {/* ---- Upload mode ---- */}
-            {uploadMode === 'upload' && (
-              <>
-                <div onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-                  onDragLeave={() => setDragging(false)}
-                  onDrop={(e) => { e.preventDefault(); setDragging(false); handleFiles(e.dataTransfer.files); }}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={cn('border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all',
-                    dragging ? 'border-[#5258E4] bg-[#EEF0FF]' : 'border-gray-300 bg-white hover:border-[#5258E4] hover:bg-[#EEF0FF]/30')}>
-                  <Upload className={cn('w-10 h-10 mx-auto mb-3', dragging ? 'text-[#5258E4]' : 'text-gray-300')} />
-                  <p className="font-medium text-gray-600">Drop images here or click to browse</p>
-                  <p className="text-sm text-gray-400 mt-1">JPG or PNG · Max 50MB each · 10–30 images</p>
-                  <input ref={fileInputRef} type="file" multiple accept="image/jpeg,image/png" className="hidden"
-                    onChange={(e) => e.target.files && handleFiles(e.target.files)} />
-                </div>
-
-                {uploadedFiles.length > 0 && (
-                  <div className="grid grid-cols-5 gap-2">
-                    {uploadedFiles.map((uf, idx) => (
-                      <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden bg-gray-100">
-                        <img src={uf.preview} alt={uf.file.name} className="w-full h-full object-cover" />
-                        <button onClick={() => removeUploadedFile(idx)}
-                          className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <X className="w-3 h-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>
-            )}
-
-            {/* ---- Find mode ---- */}
-            {uploadMode === 'find' && (
-              <div className="space-y-4">
-                <div className="bg-white rounded-xl border border-gray-200 p-4">
-                  <label className="block text-sm font-medium text-[#1a1a2e] mb-2">
-                    Describe what you&apos;re building
-                  </label>
-                  <textarea value={searchDescription} onChange={(e) => setSearchDescription(e.target.value)}
-                    rows={3} placeholder={`e.g. "A female professional in her 30s in a modern office setting — lifestyle photography for a tech company brand"`}
-                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-[#5258E4]" />
-                  <div className="flex items-center justify-between mt-3">
-                    <p className="text-xs text-gray-400">Be specific about subject, style, environment, and mood</p>
-                    <button onClick={() => searchAssets(false)} disabled={!searchDescription.trim() || searching}
-                      className="flex items-center gap-2 bg-[#5258E4] text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-40 hover:bg-[#4147c4] transition-colors">
-                      {searching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
-                      {searching ? 'Searching…' : 'Find assets'}
+            {uploadedFiles.length > 0 && (
+              <div className="grid grid-cols-5 gap-2">
+                {uploadedFiles.map((uf, idx) => (
+                  <div key={idx} className="relative group aspect-square rounded-lg overflow-hidden bg-gray-100">
+                    <img src={uf.preview} alt={uf.file.name} className="w-full h-full object-cover" />
+                    <button onClick={() => removeUploadedFile(idx)}
+                      className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <X className="w-3 h-3" />
                     </button>
                   </div>
-                </div>
-
-                {searchError && (
-                  <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex gap-3">
-                    <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium text-red-800">{searchError}</p>
-                      <a href="https://www.pexels.com/api/" target="_blank" rel="noreferrer"
-                        className="text-xs text-red-600 underline mt-1 flex items-center gap-1">
-                        Get a free Pexels API key <ExternalLink className="w-3 h-3" />
-                      </a>
-                    </div>
-                  </div>
-                )}
-
-                {searchExplanation && !searching && (
-                  <div className="flex gap-3 bg-[#EEF0FF] rounded-xl p-3">
-                    <Sparkles className="w-4 h-4 text-[#5258E4] flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-[#3a3f9e]">{searchExplanation}</p>
-                  </div>
-                )}
-
-                {foundPhotos.length > 0 && (
-                  <>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <p className="text-sm font-medium text-gray-700">
-                          <span className={cn('font-bold', selectedPhotoIds.size >= 10 ? 'text-[#5258E4]' : 'text-yellow-600')}>
-                            {selectedPhotoIds.size}
-                          </span>
-                          <span className="text-gray-400"> / {foundPhotos.length} selected</span>
-                          <span className={cn('ml-2 text-xs', selectedPhotoIds.size >= 10 ? 'text-green-600' : 'text-yellow-600')}>
-                            (need 10–30)
-                          </span>
-                        </p>
-                        <div className="flex gap-2">
-                          <button onClick={() => setSelectedPhotoIds(new Set(foundPhotos.slice(0, 30).map((p) => p.id)))}
-                            className="text-xs text-gray-400 hover:text-[#5258E4] transition-colors underline">
-                            Select all
-                          </button>
-                          <span className="text-gray-200">·</span>
-                          <button onClick={() => setSelectedPhotoIds(new Set())}
-                            className="text-xs text-gray-400 hover:text-red-500 transition-colors underline">
-                            Clear all
-                          </button>
-                        </div>
-                      </div>
-                      <button onClick={() => searchAssets(true)} disabled={searching}
-                        className="flex items-center gap-1.5 text-xs text-[#5258E4] hover:underline disabled:opacity-50">
-                        <RefreshCw className="w-3.5 h-3.5" /> Find more
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-4 gap-2">
-                      {foundPhotos.map((photo) => {
-                        const selected = selectedPhotoIds.has(photo.id);
-                        return (
-                          <div key={photo.id}
-                            className={cn('relative aspect-square rounded-xl overflow-hidden bg-gray-100 cursor-pointer group transition-all',
-                              selected ? 'ring-2 ring-[#5258E4]' : 'ring-2 ring-transparent opacity-40 hover:opacity-70')}
-                            onClick={() => togglePhoto(photo.id)}>
-                            <img src={photo.src.medium} alt={photo.alt} className="w-full h-full object-cover" />
-
-                            {/* Selected checkmark — always visible when selected */}
-                            {selected && (
-                              <div className="absolute top-2 left-2 w-5 h-5 rounded-full bg-[#5258E4] flex items-center justify-center shadow">
-                                <Check className="w-3 h-3 text-white" />
-                              </div>
-                            )}
-
-                            {/* X button — prominent on hover for selected, shown for deselected */}
-                            <button
-                              onClick={(e) => { e.stopPropagation(); togglePhoto(photo.id); }}
-                              className={cn(
-                                'absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center shadow transition-all',
-                                selected
-                                  ? 'bg-black/50 text-white opacity-0 group-hover:opacity-100'
-                                  : 'bg-white/90 text-gray-500 opacity-100 hover:bg-[#5258E4] hover:text-white'
-                              )}>
-                              {selected ? <X className="w-3 h-3" /> : <Check className="w-3 h-3" />}
-                            </button>
-
-                            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <p className="text-white text-[9px] truncate">{photo.photographer}</p>
-                              <p className="text-white/70 text-[9px]">{photo.width}×{photo.height}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </>
-                )}
-
-                {foundPhotos.length === 0 && !searching && !searchError && (
-                  <div className="text-center py-12 bg-white rounded-xl border border-dashed border-gray-200">
-                    <ImageOff className="w-8 h-8 text-gray-200 mx-auto mb-2" />
-                    <p className="text-sm text-gray-400">Describe your project above and click "Find assets"</p>
-                  </div>
-                )}
+                ))}
               </div>
             )}
 
@@ -1375,11 +1152,11 @@ function NewProjectWizard() {
               <button onClick={() => goBack(1)} className="flex items-center gap-2 text-gray-500 hover:text-gray-700 px-4 py-2.5 rounded-xl transition-colors">
                 <ArrowLeft className="w-4 h-4" /> Back
               </button>
-              <button onClick={runValidation} disabled={totalSelectedCount < 10 || validating || downloadingFound}
+              <button onClick={runValidation} disabled={totalSelectedCount < 10 || validating}
                 className="flex items-center gap-2 bg-[#5258E4] text-white px-6 py-3 rounded-xl font-medium disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#4147c4] transition-colors">
-                {(validating || downloadingFound) && <Loader2 className="w-4 h-4 animate-spin" />}
-                {downloadingFound ? 'Downloading…' : validating ? 'Processing…' : 'Validate assets'}
-                {!validating && !downloadingFound && <ArrowRight className="w-4 h-4" />}
+                {validating && <Loader2 className="w-4 h-4 animate-spin" />}
+                {validating ? 'Processing…' : 'Validate assets'}
+                {!validating && <ArrowRight className="w-4 h-4" />}
               </button>
             </div>
           </div>
