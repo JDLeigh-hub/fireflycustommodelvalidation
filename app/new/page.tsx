@@ -7,7 +7,7 @@ import {
   ArrowLeft, ArrowRight, Upload, X, CheckCircle, AlertTriangle,
   AlertCircle, Sparkles, MessageSquare, Wand2, ChevronDown, ChevronUp,
   Copy, Check, Loader2, Camera, User, ShoppingBag, Laugh, Shapes, Boxes,
-  Tag, Save, RefreshCw, Image, Palette, Globe, Package, Brush, Mountain,
+  Tag, Save, RefreshCw, Palette, Globe, Package, Brush, Mountain,
 } from 'lucide-react';
 import type { ModelType, TrainingAsset, ChatMessage, IdealPrompt, PromptSegmentRole, ValidationIssue } from '@/lib/types';
 import { validateAsset, validateDataset, computeAssetScore } from '@/lib/validation';
